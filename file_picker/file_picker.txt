@@ -1,0 +1,142 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
+
+enum PickFileType {
+  image,
+  video,
+  audio,
+  pdf,
+  csv,
+  any,
+}
+
+class AppFilePicker {
+  AppFilePicker._();
+
+  // pick single file
+  static Future<File?> single(PickFileType type) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: _fileType(type),
+      allowedExtensions: _extensions(type),
+      allowMultiple: false,
+    );
+
+    final path = result?.files.single.path;
+
+    if (path == null) return null;
+
+    return File(path);
+  }
+
+  // pick multiple files
+  static Future<List<File>> multiple(PickFileType type) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: _fileType(type),
+      allowedExtensions: _extensions(type),
+      allowMultiple: true,
+    );
+
+    if (result == null) return [];
+
+    return result.files
+        .where((file) => file.path != null)
+        .map((file) => File(file.path!))
+        .toList();
+  }
+
+  // pick image
+  static Future<File?> image() {
+    return single(PickFileType.image);
+  }
+
+  // pick multiple images
+  static Future<List<File>> multiImage() {
+    return multiple(PickFileType.image);
+  }
+
+  // pick video
+  static Future<File?> video() {
+    return single(PickFileType.video);
+  }
+
+  // pick multiple videos
+  static Future<List<File>> multiVideo() {
+    return multiple(PickFileType.video);
+  }
+
+  // pick audio
+  static Future<File?> audio() {
+    return single(PickFileType.audio);
+  }
+
+  // pick multiple audios
+  static Future<List<File>> multiAudio() {
+    return multiple(PickFileType.audio);
+  }
+
+  // pick pdf
+  static Future<File?> pdf() {
+    return single(PickFileType.pdf);
+  }
+
+  // pick multiple pdfs
+  static Future<List<File>> multiPdf() {
+    return multiple(PickFileType.pdf);
+  }
+
+  // pick csv
+  static Future<File?> csv() {
+    return single(PickFileType.csv);
+  }
+
+  // pick multiple csvs
+  static Future<List<File>> multiCsv() {
+    return multiple(PickFileType.csv);
+  }
+
+  // pick any file
+  static Future<File?> file() {
+    return single(PickFileType.any);
+  }
+
+  // pick multiple files
+  static Future<List<File>> multiFile() {
+    return multiple(PickFileType.any);
+  }
+
+  // file type
+  static FileType _fileType(PickFileType type) {
+    switch (type) {
+      case PickFileType.image:
+        return FileType.image;
+
+      case PickFileType.video:
+        return FileType.video;
+
+      case PickFileType.audio:
+        return FileType.audio;
+
+      case PickFileType.pdf:
+      case PickFileType.csv:
+        return FileType.custom;
+
+      case PickFileType.any:
+        return FileType.any;
+    }
+  }
+
+  // file extensions
+  static List<String>? _extensions(PickFileType type) {
+    switch (type) {
+      case PickFileType.pdf:
+        return ['pdf'];
+
+      case PickFileType.csv:
+        return ['csv'];
+
+      default:
+        return null;
+    }
+  }
+}
