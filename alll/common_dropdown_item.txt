@@ -1,0 +1,19 @@
+import 'package:flutter/material.dart';
+
+class CommonDropdownItem<T> {
+  final String title;
+  final T? value;
+  final List<CommonDropdownItem<T>> children;
+  final VoidCallback? onTap;
+  final Widget? leading;
+  final Widget? trailing;
+
+  const CommonDropdownItem({
+    required this.title,
+    this.value,
+    this.children = const [],
+    this.onTap,
+    this.leading,
+    this.trailing,
+  });
+}

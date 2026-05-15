@@ -1,0 +1,83 @@
+import 'package:flutter/material.dart';
+
+import '../const/app_colors.dart';
+
+class CommonInputStyle {
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color focusedBorderColor;
+  final Color errorBorderColor;
+
+  final Color textColor;
+  final Color hintColor;
+  final Color iconColor;
+
+  final Color dropdownBackgroundColor;
+  final Color dropdownBorderColor;
+  final Color selectedItemColor;
+  final Color hoverItemColor;
+
+  final double borderRadius;
+  final double borderWidth;
+
+  final double horizontalPadding;
+  final double verticalPadding;
+
+  final double iconSize;
+
+  final double fieldHeight;
+
+  final EdgeInsetsGeometry? contentPadding;
+
+  final TextStyle? textStyle;
+  final TextStyle? hintStyle;
+  final TextStyle? errorStyle;
+  final TextStyle? itemTextStyle;
+
+  final double dropdownMaxHeight;
+  final EdgeInsetsGeometry dropdownPadding;
+  final BorderRadius dropdownBorderRadius;
+  final double dropdownItemSpacing;
+  final EdgeInsetsGeometry itemPadding;
+  final Color itemBackgroundColor;
+
+  final List<BoxShadow> shadows;
+  final Duration dropdownAnimationDuration;
+  final Curve dropdownAnimationCurve;
+
+  const CommonInputStyle({
+    this.backgroundColor = AppColors.background,
+    this.borderColor = AppColors.borderColor,
+    this.focusedBorderColor = AppColors.outlinedColor,
+    this.errorBorderColor = Colors.red,
+    this.textColor = AppColors.textColor,
+    this.hintColor = AppColors.textColor,
+    this.iconColor = AppColors.textColor,
+    this.dropdownBackgroundColor = AppColors.background,
+    this.dropdownBorderColor = AppColors.borderColor,
+    this.selectedItemColor = Color(0xFFE8F0FE),
+    this.hoverItemColor = Color(0xFFF5F7FA),
+    this.borderRadius = 12,
+    this.borderWidth = 1,
+    this.horizontalPadding = 16,
+    this.verticalPadding = 16,
+    this.iconSize = 22,
+    this.fieldHeight = 52,
+    this.contentPadding,
+    this.textStyle,
+    this.hintStyle,
+    this.errorStyle,
+    this.itemTextStyle,
+    this.dropdownMaxHeight = 420,
+    this.dropdownPadding = const EdgeInsets.all(16),
+    this.dropdownBorderRadius = const BorderRadius.vertical(
+      top: Radius.circular(20),
+    ),
+    this.dropdownItemSpacing = 4,
+    this.itemPadding = const EdgeInsets.symmetric(horizontal: 8),
+    this.itemBackgroundColor = Colors.transparent,
+    this.shadows = const [],
+    this.dropdownAnimationDuration = const Duration(milliseconds: 200),
+    this.dropdownAnimationCurve = Curves.easeOut,
+  });
+}

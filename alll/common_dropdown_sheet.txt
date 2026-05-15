@@ -1,0 +1,154 @@
+import 'package:flutter/material.dart';
+
+import '../style/global_text_widget.dart';
+import 'common_dropdown_item.txt';
+import 'common_dropdown_tile.txt';
+import 'common_input_style.dart';
+
+class CommonDropdownSheet<T> extends StatelessWidget {
+  final String title;
+  final List<CommonDropdownItem<T>> items;
+  final ValueChanged<CommonDropdownItem<T>> onSelected;
+  final CommonInputStyle style;
+
+  final bool searchable;
+  final TextEditingController? searchController;
+  final ValueChanged<String>? onSearchChanged;
+
+  final Widget? header;
+  final Widget? footer;
+  final Widget? addItemWidget;
+  final String? addItemText;
+  final VoidCallback? onAddItemTap;
+
+  const CommonDropdownSheet({
+    super.key,
+    required this.title,
+    required this.items,
+    required this.onSelected,
+    required this.style,
+    this.searchable = false,
+    this.searchController,
+    this.onSearchChanged,
+    this.header,
+    this.footer,
+    this.addItemWidget,
+    this.addItemText,
+    this.onAddItemTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: AnimatedContainer(
+        duration: style.dropdownAnimationDuration,
+        curve: style.dropdownAnimationCurve,
+        padding: style.dropdownPadding,
+        decoration: BoxDecoration(
+          color: style.dropdownBackgroundColor,
+          borderRadius: style.dropdownBorderRadius,
+          border: Border.all(
+            color: style.dropdownBorderColor,
+            width: style.borderWidth,
+          ),
+          boxShadow: style.shadows,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: style.dropdownMaxHeight,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 45,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: style.borderColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (header != null)
+                header!
+              else
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    title,
+                    style: style.textStyle ??
+                        globalTextStyle(
+                          color: style.textColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+              if (searchable) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: searchController,
+                  onChanged: onSearchChanged,
+                  decoration: InputDecoration(
+                    hintText: 'Search...',
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: style.iconColor,
+                      size: style.iconSize,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(style.borderRadius),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) =>
+                      SizedBox(height: style.dropdownItemSpacing),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return CommonDropdownTile<T>(
+                      item: item,
+                      onSelected: onSelected,
+                      style: style,
+                      textStyle: style.itemTextStyle ??
+                          globalTextStyle(
+                            color: style.textColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                    );
+                  },
+                ),
+              ),
+              if (addItemWidget != null) ...[
+                const Divider(),
+                addItemWidget!,
+              ] else if (addItemText != null) ...[
+                const Divider(),
+                ListTile(
+                  leading: Icon(Icons.add, color: style.iconColor),
+                  title: Text(
+                    addItemText!,
+                    style: style.textStyle ??
+                        globalTextStyle(
+                          color: style.textColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                  onTap: onAddItemTap,
+                ),
+              ],
+              if (footer != null) footer!,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,187 @@
+import 'dart:convert';
+import 'dart:developer';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+
+class AppLogger {
+  const AppLogger._();
+
+  static Color primaryColor = Colors.blue;
+  static Color successColor = Colors.green;
+  static Color errorColor = Colors.red;
+  static Color warningColor = Colors.orange;
+  static Color infoColor = Colors.blueGrey;
+  static Color textColor = Colors.white;
+
+  /// Configure
+  static void configure({
+    Color? primary,
+    Color? success,
+    Color? error,
+    Color? warning,
+    Color? info,
+    Color? text,
+  }) {
+    primaryColor = primary ?? primaryColor;
+    successColor = success ?? successColor;
+    errorColor = error ?? errorColor;
+    warningColor = warning ?? warningColor;
+    infoColor = info ?? infoColor;
+    textColor = text ?? textColor;
+  }
+
+  /// Debug
+  static void debug(dynamic message, {String tag = 'DEBUG'}) {
+    if (kDebugMode) {
+      log(message.toString(), name: tag);
+    }
+  }
+
+  /// Api Success
+  static void apiSuccess({required String endpoint, dynamic response}) {
+    if (!kDebugMode) return;
+
+    log(_pretty(response), name: 'API SUCCESS => $endpoint');
+  }
+
+  /// Api Error
+  static void apiError({required String endpoint, dynamic error}) {
+    if (!kDebugMode) return;
+
+    log(_pretty(error), name: 'API ERROR => $endpoint');
+  }
+
+  /// Success
+  static void success(String message) {
+    _setup(successColor);
+
+    EasyLoading.showSuccess(message, duration: const Duration(seconds: 2));
+  }
+
+  /// Error
+  static void error(String message) {
+    _setup(errorColor);
+
+    EasyLoading.showError(message, duration: const Duration(seconds: 3));
+  }
+
+  /// Info
+  static void info(String message) {
+    _setup(infoColor);
+
+    EasyLoading.showInfo(message, duration: const Duration(seconds: 2));
+  }
+
+  /// Warning
+  static void warning(String message) {
+    _setup(warningColor);
+
+    EasyLoading.showToast(
+      message,
+      duration: const Duration(seconds: 2),
+      toastPosition: EasyLoadingToastPosition.center,
+    );
+  }
+
+  /// Toast
+  static void toast(String message) {
+    _setup(primaryColor);
+
+    EasyLoading.showToast(
+      message,
+      duration: const Duration(seconds: 2),
+      toastPosition: EasyLoadingToastPosition.center,
+    );
+  }
+
+  /// Loading
+  static void loading({String status = 'Loading...'}) {
+    _setup(primaryColor);
+
+    EasyLoading.show(
+      status: status,
+      dismissOnTap: false,
+      maskType: EasyLoadingMaskType.black,
+    );
+  }
+
+  /// Session Expired
+  static void sessionExpired({
+    String message = 'Session expired. Please login again.',
+  }) {
+    _setup(errorColor);
+
+    EasyLoading.showToast(
+      message,
+      duration: const Duration(seconds: 3),
+      toastPosition: EasyLoadingToastPosition.center,
+      maskType: EasyLoadingMaskType.none,
+    );
+  }
+
+  /// Dismiss
+  static void dismiss() {
+    EasyLoading.dismiss();
+  }
+
+  /// Readable Message
+  static String readableMessage(dynamic value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return value;
+    }
+
+    if (value is List) {
+      return value.map((e) => e.toString()).join('\n');
+    }
+
+    if (value is Map) {
+      if (value['errorSources'] is List) {
+        return (value['errorSources'] as List)
+            .map((error) {
+              if (error is Map && error['message'] != null) {
+                return error['message'].toString();
+              }
+
+              return error.toString();
+            })
+            .join('\n');
+      }
+
+      final message = value['message'];
+
+      if (message is List) {
+        return message.map((e) => e.toString()).join('\n');
+      }
+
+      for (final key in ['message', 'error', 'detail']) {
+        final candidate = value[key];
+
+        if (candidate is String && candidate.trim().isNotEmpty) {
+          return candidate;
+        }
+      }
+    }
+
+    return 'Something went wrong';
+  }
+
+  /// Setup
+  static void _setup(Color backgroundColor) {
+    EasyLoading.instance
+      ..backgroundColor = backgroundColor
+      ..indicatorColor = textColor
+      ..textColor = textColor
+      ..loadingStyle = EasyLoadingStyle.custom;
+  }
+
+  /// Pretty
+  static String _pretty(dynamic value) {
+    try {
+      return const JsonEncoder.withIndent('  ').convert(value);
+    } catch (_) {
+      return value.toString();
+    }
+  }
+}

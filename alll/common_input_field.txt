@@ -1,0 +1,385 @@
+import 'package:flutter/material.dart';
+
+import '../style/global_text_widget.dart';
+import 'common_dropdown_item.txt';
+import 'common_dropdown_sheet.txt';
+import 'common_field_type.dart';
+import 'common_input_style.dart';
+import 'dropdown_view_type.dart';
+
+class CommonInputField<T> extends StatelessWidget {
+  final TextEditingController controller;
+  final String hintText;
+  final CommonInputStyle style;
+
+  final CommonFieldType fieldType;
+  final DropdownViewType dropdownViewType;
+
+  final String? errorText;
+  final bool showError;
+
+  final bool obscureText;
+  final bool readOnly;
+  final bool enabled;
+
+  final int maxLines;
+  final int? maxLength;
+
+  final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onTap;
+  final VoidCallback? onSuffixTap;
+  final ValueChanged<T?>? onDropdownSelected;
+
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
+
+  final List<CommonDropdownItem<T>> dropdownItems;
+  final String? dropdownTitle;
+
+  final bool searchableDropdown;
+  final TextEditingController? searchController;
+  final ValueChanged<String>? onSearchChanged;
+
+  final Widget? dropdownHeader;
+  final Widget? dropdownFooter;
+  final Widget? addItemWidget;
+  final String? addItemText;
+  final VoidCallback? onAddItemTap;
+
+  final Future<T?> Function(BuildContext context)? onRoutePick;
+
+  const CommonInputField({
+    super.key,
+    required this.controller,
+    required this.hintText,
+    this.style = const CommonInputStyle(),
+    this.fieldType = CommonFieldType.text,
+    this.dropdownViewType = DropdownViewType.bottomSheet,
+    this.errorText,
+    this.showError = true,
+    this.obscureText = false,
+    this.readOnly = false,
+    this.enabled = true,
+    this.maxLines = 1,
+    this.maxLength,
+    this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
+    this.onChanged,
+    this.onTap,
+    this.onSuffixTap,
+    this.onDropdownSelected,
+    this.prefixIcon,
+    this.suffixIcon,
+    this.dropdownItems = const [],
+    this.dropdownTitle,
+    this.searchableDropdown = false,
+    this.searchController,
+    this.onSearchChanged,
+    this.dropdownHeader,
+    this.dropdownFooter,
+    this.addItemWidget,
+    this.addItemText,
+    this.onAddItemTap,
+    this.onRoutePick,
+  });
+
+  bool get _isPassword => fieldType == CommonFieldType.password;
+
+  bool get _isDropdown => fieldType == CommonFieldType.dropdown;
+
+  bool get _isSearch => fieldType == CommonFieldType.search;
+
+  bool get _isLocation => fieldType == CommonFieldType.location;
+
+  bool get _isRoutePicker => fieldType == CommonFieldType.routePicker;
+
+  bool get _hasError =>
+      showError && errorText != null && errorText!.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: style.backgroundColor,
+        borderRadius: BorderRadius.circular(style.borderRadius),
+        boxShadow: style.shadows,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: style.fieldHeight),
+        child: TextField(
+          controller: controller,
+          enabled: enabled,
+          readOnly: readOnly || _isDropdown || _isRoutePicker || _isLocation,
+          obscureText: _isPassword ? obscureText : false,
+          maxLines: _isPassword ? 1 : maxLines,
+          maxLength: maxLength,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          onChanged: onChanged,
+          onTap: () => _handleTap(context),
+          cursorColor: style.textColor,
+          style: style.textStyle ??
+              globalTextStyle(
+                color: style.textColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+              ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            errorText: _hasError ? errorText : null,
+            errorStyle: style.errorStyle ??
+                globalTextStyle(
+                  color: style.errorBorderColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                ),
+            filled: true,
+            fillColor: Colors.transparent,
+            prefixIcon: prefixIcon,
+            suffixIcon: _buildSuffixIcon(context),
+            hintStyle: style.hintStyle ??
+                globalTextStyle(
+                  color: style.hintColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+            contentPadding: style.contentPadding ??
+                EdgeInsets.symmetric(
+                  horizontal: style.horizontalPadding,
+                  vertical: style.verticalPadding,
+                ),
+            border: _border(_hasError, false),
+            enabledBorder: _border(_hasError, false),
+            focusedBorder: _border(_hasError, true),
+            disabledBorder: _border(_hasError, false),
+            errorBorder: _border(true, false),
+            focusedErrorBorder: _border(true, true),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleTap(BuildContext context) async {
+    if (_isRoutePicker && onRoutePick != null) {
+      final result = await onRoutePick!(context);
+
+      if (result != null) {
+        controller.text = result.toString();
+        onDropdownSelected?.call(result);
+      }
+
+      return;
+    }
+
+    if (_isDropdown && dropdownItems.isNotEmpty) {
+      _openDropdown(context);
+      return;
+    }
+
+    onTap?.call();
+  }
+
+  void _openDropdown(BuildContext context) {
+    switch (dropdownViewType) {
+      case DropdownViewType.dialog:
+        _showDialogDropdown(context);
+        break;
+
+      case DropdownViewType.bottomSheet:
+        _showBottomSheetDropdown(context);
+        break;
+
+      case DropdownViewType.menu:
+        _showMenuDropdown(context);
+        break;
+    }
+  }
+
+  void _showBottomSheetDropdown(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return CommonDropdownSheet<T>(
+          title: dropdownTitle ?? hintText,
+          items: dropdownItems,
+          searchable: searchableDropdown,
+          searchController: searchController,
+          onSearchChanged: onSearchChanged,
+          header: dropdownHeader,
+          footer: dropdownFooter,
+          addItemWidget: addItemWidget,
+          addItemText: addItemText,
+          onAddItemTap: onAddItemTap,
+          onSelected: (item) {
+            _selectItem(item);
+            Navigator.pop(context);
+          },
+          style: style,
+        );
+      },
+    );
+  }
+
+  void _showDialogDropdown(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: style.dropdownBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(style.borderRadius),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: SizedBox(
+            width: 330,
+            child: CommonDropdownSheet<T>(
+              title: dropdownTitle ?? hintText,
+              items: dropdownItems,
+              searchable: searchableDropdown,
+              searchController: searchController,
+              onSearchChanged: onSearchChanged,
+              header: dropdownHeader,
+              footer: dropdownFooter,
+              addItemWidget: addItemWidget,
+              addItemText: addItemText,
+              onAddItemTap: onAddItemTap,
+              onSelected: (item) {
+                _selectItem(item);
+                Navigator.pop(context);
+              },
+              style: style,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMenuDropdown(BuildContext context) {
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    final Offset offset = box?.localToGlobal(Offset.zero) ?? Offset.zero;
+
+    showMenu<CommonDropdownItem<T>>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + 50,
+        offset.dx,
+        offset.dy,
+      ),
+      items: dropdownItems.map((item) {
+        return PopupMenuItem<CommonDropdownItem<T>>(
+          value: item,
+          child: Row(
+            children: [
+              if (item.leading != null) ...[
+                item.leading!,
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: style.itemTextStyle ??
+                      globalTextStyle(
+                        color: style.textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                ),
+              ),
+              if (item.trailing != null) item.trailing!,
+            ],
+          ),
+        );
+      }).toList(),
+    ).then((item) {
+      if (item != null) _selectItem(item);
+    });
+  }
+
+  void _selectItem(CommonDropdownItem<T> item) {
+    item.onTap?.call();
+
+    controller.text = item.title;
+
+    onDropdownSelected?.call(item.value);
+  }
+
+  Widget? _buildSuffixIcon(BuildContext context) {
+    if (suffixIcon != null) return suffixIcon;
+
+    if (_isPassword) {
+      return IconButton(
+        onPressed: onSuffixTap,
+        icon: Icon(
+          obscureText ? Icons.visibility_off : Icons.visibility,
+          size: style.iconSize,
+          color: style.iconColor,
+        ),
+      );
+    }
+
+    if (_isDropdown) {
+      return IconButton(
+        onPressed: () => _openDropdown(context),
+        icon: Icon(
+          Icons.keyboard_arrow_down,
+          size: style.iconSize,
+          color: style.iconColor,
+        ),
+      );
+    }
+
+    if (_isSearch) {
+      return IconButton(
+        onPressed: onSuffixTap,
+        icon: Icon(
+          Icons.search,
+          size: style.iconSize,
+          color: style.iconColor,
+        ),
+      );
+    }
+
+    if (_isLocation) {
+      return IconButton(
+        onPressed: onSuffixTap ?? onTap,
+        icon: Icon(
+          Icons.location_on_outlined,
+          size: style.iconSize,
+          color: style.iconColor,
+        ),
+      );
+    }
+
+    if (_isRoutePicker) {
+      return Icon(
+        Icons.arrow_forward_ios,
+        size: style.iconSize,
+        color: style.iconColor,
+      );
+    }
+
+    return null;
+  }
+
+  OutlineInputBorder _border(bool hasError, bool focused) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(style.borderRadius),
+      borderSide: BorderSide(
+        color: hasError
+            ? style.errorBorderColor
+            : focused
+                ? style.focusedBorderColor
+                : style.borderColor,
+        width: style.borderWidth,
+      ),
+    );
+  }
+}

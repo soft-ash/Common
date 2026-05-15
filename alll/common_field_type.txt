@@ -1,0 +1,8 @@
+enum CommonFieldType {
+  text,
+  password,
+  dropdown,
+  search,
+  location,
+  routePicker,
+}

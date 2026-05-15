@@ -1,0 +1,383 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'app_logger.dart';
+
+class ApiResponse {
+  final bool success;
+  final int statusCode;
+  final dynamic data;
+  final String message;
+
+  const ApiResponse({
+    required this.success,
+    required this.statusCode,
+    this.data,
+    this.message = '',
+  });
+}
+
+class ApiClient {
+  final String baseUrl;
+  final Duration timeout;
+  final Duration uploadTimeout;
+  final Future<String?> Function()? tokenProvider;
+  final Future<void> Function()? onSessionExpired;
+
+  ApiClient({
+    required this.baseUrl,
+    this.timeout = const Duration(seconds: 30),
+    this.uploadTimeout = const Duration(minutes: 5),
+    this.tokenProvider,
+    this.onSessionExpired,
+  });
+
+  final http.Client _client = http.Client();
+
+  /// Get
+  Future<ApiResponse> getData({
+    required String endpoint,
+    Map<String, dynamic>? query,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _client
+          .get(_uri(endpoint, query), headers: await _headers(headers))
+          .timeout(timeout);
+
+      return _handleResponse(response, endpoint);
+    } catch (error) {
+      return _handleError(error, endpoint);
+    }
+  }
+
+  /// Post
+  Future<ApiResponse> postData({
+    required String endpoint,
+    dynamic body,
+    Map<String, dynamic>? query,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            _uri(endpoint, query),
+            headers: await _headers(headers),
+            body: jsonEncode(body ?? {}),
+          )
+          .timeout(timeout);
+
+      return _handleResponse(response, endpoint);
+    } catch (error) {
+      return _handleError(error, endpoint);
+    }
+  }
+
+  /// Put
+  Future<ApiResponse> updateData({
+    required String endpoint,
+    dynamic body,
+    Map<String, dynamic>? query,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _client
+          .put(
+            _uri(endpoint, query),
+            headers: await _headers(headers),
+            body: jsonEncode(body ?? {}),
+          )
+          .timeout(timeout);
+
+      return _handleResponse(response, endpoint);
+    } catch (error) {
+      return _handleError(error, endpoint);
+    }
+  }
+
+  /// Patch
+  Future<ApiResponse> patchData({
+    required String endpoint,
+    dynamic body,
+    Map<String, dynamic>? query,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _client
+          .patch(
+            _uri(endpoint, query),
+            headers: await _headers(headers),
+            body: jsonEncode(body ?? {}),
+          )
+          .timeout(timeout);
+
+      return _handleResponse(response, endpoint);
+    } catch (error) {
+      return _handleError(error, endpoint);
+    }
+  }
+
+  /// Delete
+  Future<ApiResponse> deleteData({
+    required String endpoint,
+    dynamic body,
+    Map<String, dynamic>? query,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _client
+          .delete(
+            _uri(endpoint, query),
+            headers: await _headers(headers),
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(timeout);
+
+      return _handleResponse(response, endpoint);
+    } catch (error) {
+      return _handleError(error, endpoint);
+    }
+  }
+
+  /// Upload File
+  Future<ApiResponse> uploadFile({
+    required String endpoint,
+    required File file,
+    String fileField = 'file',
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    String method = 'POST',
+  }) async {
+    try {
+      final request = http.MultipartRequest(method, _uri(endpoint, null));
+
+      request.headers.addAll(await _multipartHeaders(headers));
+
+      if (body != null) {
+        request.fields.addAll(
+          body.map((key, value) => MapEntry(key, value.toString())),
+        );
+      }
+
+      request.files.add(
+        await http.MultipartFile.fromPath(fileField, file.path),
+      );
+
+      final streamedResponse = await request.send().timeout(uploadTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response, endpoint);
+    } catch (error) {
+      return _handleError(error, endpoint);
+    }
+  }
+
+  /// Upload Files
+  Future<ApiResponse> uploadFiles({
+    required String endpoint,
+    required List<File> files,
+    String fileField = 'files',
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    String method = 'POST',
+  }) async {
+    try {
+      final request = http.MultipartRequest(method, _uri(endpoint, null));
+
+      request.headers.addAll(await _multipartHeaders(headers));
+
+      if (body != null) {
+        request.fields.addAll(
+          body.map((key, value) => MapEntry(key, value.toString())),
+        );
+      }
+
+      for (final file in files) {
+        request.files.add(
+          await http.MultipartFile.fromPath(fileField, file.path),
+        );
+      }
+
+      final streamedResponse = await request.send().timeout(uploadTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response, endpoint);
+    } catch (error) {
+      return _handleError(error, endpoint);
+    }
+  }
+
+  /// Uri
+  Uri _uri(String endpoint, Map<String, dynamic>? query) {
+    final url = endpoint.startsWith('http') ? endpoint : '$baseUrl$endpoint';
+    final uri = Uri.parse(url);
+
+    if (query == null || query.isEmpty) return uri;
+
+    return uri.replace(
+      queryParameters: query.map(
+        (key, value) => MapEntry(key, value.toString()),
+      ),
+    );
+  }
+
+  /// Headers
+  Future<Map<String, String>> _headers(Map<String, String>? headers) async {
+    final token = await tokenProvider?.call();
+
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': token,
+      if (headers != null) ...headers,
+    };
+  }
+
+  /// Multipart Headers
+  Future<Map<String, String>> _multipartHeaders(
+    Map<String, String>? headers,
+  ) async {
+    final token = await tokenProvider?.call();
+
+    return {
+      'Accept': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': token,
+      if (headers != null) ...headers,
+    };
+  }
+
+  /// Handle Response
+  ApiResponse _handleResponse(http.Response response, String endpoint) {
+    final data = _decode(response.body);
+    final message = AppLogger.readableMessage(data);
+
+    final isSuccessStatus =
+        response.statusCode >= 200 && response.statusCode < 300;
+
+    final hasBackendFailure = data is Map && data['success'] == false;
+
+    if (isSuccessStatus && !hasBackendFailure) {
+      AppLogger.apiSuccess(
+        endpoint: endpoint,
+        response: {'statusCode': response.statusCode, 'data': data},
+      );
+
+      return ApiResponse(
+        success: true,
+        statusCode: response.statusCode,
+        data: data,
+        message: message,
+      );
+    }
+
+    if (response.statusCode == 401 || _isSessionInvalidMessage(message)) {
+      _handleSessionExpired();
+    }
+
+    AppLogger.apiError(
+      endpoint: endpoint,
+      error: {
+        'statusCode': response.statusCode,
+        'data': data,
+        'message': message,
+      },
+    );
+
+    return ApiResponse(
+      success: false,
+      statusCode: response.statusCode,
+      data: data,
+      message: message,
+    );
+  }
+
+  /// Decode
+  dynamic _decode(String body) {
+    if (body.trim().isEmpty) return null;
+
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return body;
+    }
+  }
+
+  /// Handle Error
+  ApiResponse _handleError(Object error, String endpoint) {
+    AppLogger.apiError(endpoint: endpoint, error: error.toString());
+
+    if (error is TimeoutException) {
+      return const ApiResponse(
+        success: false,
+        statusCode: 408,
+        message: 'Request timeout. Please try again.',
+      );
+    }
+
+    if (error is SocketException) {
+      return const ApiResponse(
+        success: false,
+        statusCode: -1,
+        message: 'No internet connection.',
+      );
+    }
+
+    if (error is http.ClientException) {
+      return const ApiResponse(
+        success: false,
+        statusCode: -1,
+        message: 'Network error occurred.',
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      statusCode: -1,
+      message: error.toString(),
+    );
+  }
+
+  /// Session Invalid Message
+  bool _isSessionInvalidMessage(String message) {
+    final lower = message.toLowerCase();
+
+    return lower.contains('invalid session') ||
+        lower.contains('session expired') ||
+        lower.contains('session invalid') ||
+        lower.contains('please login') ||
+        lower.contains('token expired') ||
+        lower.contains('token invalid') ||
+        lower.contains('jwt expired') ||
+        lower.contains('not authenticated') ||
+        lower.contains('unauthorized');
+  }
+
+  /// Handle Session Expired
+  Future<void> _handleSessionExpired() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.clear();
+
+    AppLogger.dismiss();
+    AppLogger.sessionExpired();
+
+    if (onSessionExpired != null) {
+      await onSessionExpired!();
+      return;
+    }
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    Get.offAllNamed('/auth/login');
+  }
+
+  /// Close
+  void close() {
+    _client.close();
+  }
+}

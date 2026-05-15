@@ -1,0 +1,37 @@
+import 'package:flutter/material.dart';
+
+import 'common_input_style.dart';
+
+class AppInputStyles {
+  static const dark = CommonInputStyle(
+    backgroundColor: Color(0xFF1E1E1E),
+    textColor: Colors.white,
+    hintColor: Color(0x99FFFFFF),
+    borderColor: Color(0xFF333333),
+    focusedBorderColor: Color(0xFF4CAF50),
+    dropdownBackgroundColor: Color(0xFF1E1E1E),
+    iconColor: Colors.white,
+  );
+
+  static const light = CommonInputStyle(
+    backgroundColor: Colors.white,
+    textColor: Colors.black,
+    hintColor: Color(0x99000000),
+    borderColor: Color(0xFFE0E0E0),
+    focusedBorderColor: Color(0xFF2962FF),
+    dropdownBackgroundColor: Colors.white,
+    iconColor: Colors.black54,
+  );
+
+  static const outlined = CommonInputStyle(
+    backgroundColor: Colors.transparent,
+    borderColor: Color(0xFFBDBDBD),
+    focusedBorderColor: Color(0xFF2962FF),
+  );
+
+  static const filled = CommonInputStyle(
+    backgroundColor: Color(0xFFF5F7FA),
+    borderColor: Color(0xFFF5F7FA),
+    focusedBorderColor: Color(0xFF2962FF),
+  );
+}
